@@ -41,7 +41,7 @@ namespace gl2df {
   #define DEFAULT_VERTEXATTRIB_COUNT 2
 
 
-  class BufferSet {
+  class VertexArray {
 
     private:
       unsigned int VAO; 
@@ -53,7 +53,7 @@ namespace gl2df {
       std::vector<unsigned int> indices;
       std::vector<VertexAttrib> attribs;
 
-      void buildBufferSet() {
+      void buildVertexArray() {
 
         glGenVertexArrays(1, &this->VAO);
 
@@ -81,53 +81,53 @@ namespace gl2df {
       }
 
     public:
-      BufferSet(float* vertices, int vertexCount = DEFAULT_VERTEX_COUNT,
+      VertexArray(float* vertices, int vertexCount = DEFAULT_VERTEX_COUNT,
            unsigned int* indices = DEFAULT_INDICES, int indexCount = DEFAULT_INDEX_COUNT,
            VertexAttrib* attribs = DEFAULT_VERTEXATTRIB, int attribCount = DEFAULT_VERTEXATTRIB_COUNT)
           : usingElementArray(true), elementCount(indexCount), vertices(vertices, vertices + (vertexCount)),
             attribs(attribs, attribs + (attribCount)) {
         if(indices != nullptr && indexCount != -1) this->indices = std::vector(indices, indices + (indexCount));
-        buildBufferSet();
+        buildVertexArray();
       }
 
-      BufferSet(const std::vector<float>& vertices = 
+      VertexArray(const std::vector<float>& vertices = 
                   std::vector(DEFAULT_VERTICES, DEFAULT_VERTICES + (DEFAULT_VERTEX_COUNT * sizeof(float))),
                 const std::vector<unsigned int>& indices = 
                   std::vector(DEFAULT_INDICES, DEFAULT_INDICES + (DEFAULT_INDEX_COUNT * sizeof(unsigned int))),
                 const std::vector<VertexAttrib>& attribs = 
                   std::vector(DEFAULT_VERTEXATTRIB, DEFAULT_VERTEXATTRIB + (DEFAULT_VERTEXATTRIB_COUNT * sizeof(VertexAttrib))))
           : usingElementArray(true), elementCount(indices.size()), vertices(vertices),
-            indices(indices), attribs(attribs) {buildBufferSet();}
+            indices(indices), attribs(attribs) {buildVertexArray();}
 
-      ~BufferSet() {
+      ~VertexArray() {
         glDeleteVertexArrays(1, &this->VAO);
         glDeleteBuffers(1, &this->VBO);
         if(this->usingElementArray) glDeleteBuffers(1, &this->EBO);
       }
 
-      BufferSet(const BufferSet& other) noexcept
-      : BufferSet(other.vertices, other.indices, other.attribs) {} 
+      VertexArray(const VertexArray& other) noexcept
+      : VertexArray(other.vertices, other.indices, other.attribs) {} 
 
 
-      BufferSet& operator=(const BufferSet& other) noexcept {
+      VertexArray& operator=(const VertexArray& other) noexcept {
 
         if(this == &other) return *this;
 
         this->vertices = other.vertices;
         this->indices = other.indices;
         this->attribs = other.attribs;
-        buildBufferSet();
+        buildVertexArray();
         return *this;
       }
 
-      BufferSet(BufferSet&& other) noexcept : VAO(other.VAO), VBO(other.VBO), EBO(other.EBO), vertices(other.vertices), 
+      VertexArray(VertexArray&& other) noexcept : VAO(other.VAO), VBO(other.VBO), EBO(other.EBO), vertices(other.vertices), 
       indices(other.indices), attribs(other.attribs), usingElementArray(other.usingElementArray), elementCount(other.elementCount) {
         other.VAO = 0;
         other.VBO = 0;
         other.EBO = 0;
       }
 
-      BufferSet& operator=(BufferSet&& other) noexcept {
+      VertexArray& operator=(VertexArray&& other) noexcept {
 
         if(this == &other) return *this;
 

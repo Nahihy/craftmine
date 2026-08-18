@@ -22,8 +22,9 @@ namespace gltdf {
       GLFWwindow* glfwWindow;
       std::string windowTitle;
       int height, width;
-      std::function<void(GLFWwindow*, double, double)> mouseCallbackFunc;
-      std::function<void(GLFWwindow*, double, double)> scrollCallbackFunc;
+      std::function<void(Window*, double, double)> mouseCallbackFunc;
+      std::function<void(Window*, double, double)> scrollCallbackFunc;
+      void* userPtr;
 
       Window(std::string windowTitle = "", int height = 600, int width = 800) 
       : windowTitle(windowTitle), height(height), width(width), lastX(width / 2), 
@@ -51,6 +52,10 @@ namespace gltdf {
         glfwPollEvents();
       }
 
+      void setCustomUserPtr(void* ptr) {
+        this->userPtr = ptr;
+      }
+
       void setAutoResizeFrameBuffer() {
         glfwSetWindowUserPointer(this->glfwWindow, this);
 
@@ -63,13 +68,13 @@ namespace gltdf {
         glfwSetFramebufferSizeCallback(this->glfwWindow, Window::frameBufferSizeSaveRatio_callback);
       }
 
-      void setAutoOffsetCalcMouseCallback(std::function<void(GLFWwindow*, double, double)> mouseCallbackFunc) {
+      void setAutoOffsetCalcMouseCallback(std::function<void(Window*, double, double)> mouseCallbackFunc) {
         this->mouseCallbackFunc = mouseCallbackFunc;
         
         glfwSetCursorPosCallback(this->glfwWindow, Window::mouse_callback);
       }
 
-      void setScollOffsetCallback(std::function<void(GLFWwindow*, double, double)> scrollCallbackFunc) {
+      void setScollOffsetCallback(std::function<void(Window*, double, double)> scrollCallbackFunc) {
         this->scrollCallbackFunc = scrollCallbackFunc;
         
         glfwSetScrollCallback(this->glfwWindow, Window::scroll_callback);
@@ -122,12 +127,12 @@ namespace gltdf {
         windowClass->lastX = xpos;
         windowClass->lastY = ypos;
         
-        windowClass->mouseCallbackFunc(window, xoffset, yoffset);
+        windowClass->mouseCallbackFunc(windowClass, xoffset, yoffset);
       }
 
       static void scroll_callback(GLFWwindow* window, double xoffset, double yoffset) {
         Window* windowClass = (Window*)glfwGetWindowUserPointer(window);
-        windowClass->scrollCallbackFunc(window, xoffset, yoffset);
+        windowClass->scrollCallbackFunc(windowClass, xoffset, yoffset);
       }
 
       void updateDeltaTime() {

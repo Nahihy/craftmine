@@ -1,9 +1,9 @@
 
 find_package(assimp)
-find_package(glfw)
+find_package(glfw3 3.4)
 
 
-if(NOT glfw_FOUND)
+if(NOT glfw3_FOUND)
   add_subdirectory(glfw)
 endif()
 if(NOT assimp_FOUND)

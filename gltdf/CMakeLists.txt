@@ -1,15 +1,18 @@
 cmake_minimum_required(VERSION 3.14)
 
 if(NOT DEFINED SHADER_DIR)
-  set(SHADER_DIR "${CMAKE_SOURCE_DIR}/assests/shaders" CACHE STRING "Shader directory")
+  set(SHADER_DIR "${CMAKE_SOURCE_DIR}/assets/shaders" CACHE STRING "Shader directory")
+  message("SHADER_DIR not set! Setting as ${SHADER_DIR}")
 endif()
 
 if(NOT DEFINED TEXTURE_DIR)
-  set(TEXTURE_DIR "${CMAKE_SOURCE_DIR}/assests/textures" CACHE STRING "Texture directory")
+  set(TEXTURE_DIR "${CMAKE_SOURCE_DIR}/asssts/textures" CACHE STRING "Texture directory")
+  message("TEXTURE_DIR not set! Setting as ${TEXTURE_DIR}")
 endif()
 
 if(NOT DEFINED MODEL_DIR)
-  set(MODEL_DIR "${CMAKE_SOURCE_DIR}/assests/models" CACHE STRING "Model directory")
+  set(MODEL_DIR "${CMAKE_SOURCE_DIR}/assets/models" CACHE STRING "Model directory")
+  message("MODEL_DIR not set! Setting as ${MODEL_DIR}")
 endif()
 
 set(SHADER_BINARY_DIR "assets/shaders" CACHE STRING "Shader directory in binary dir")
@@ -30,7 +33,7 @@ add_library(gltdf
   src/gl3df/camera.hpp
   src/gl3df/model.hpp
 
-  src/gl2df/bufferSet.hpp
+  src/gl2df/vertexArray.hpp
   src/gl2df/texture.hpp
   src/gl2df/sprite.hpp
 
