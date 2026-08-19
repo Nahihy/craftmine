@@ -43,15 +43,18 @@ namespace gl2df {
 
   class VertexArray {
 
+    public:
+      std::vector<float> vertices;
+      std::vector<unsigned int> indices;
+      std::vector<VertexAttrib> attribs;
+   
+
     private:
       unsigned int VAO; 
       unsigned int VBO;
       unsigned int EBO;
       unsigned int elementCount;
       bool usingElementArray;
-      std::vector<float> vertices;
-      std::vector<unsigned int> indices;
-      std::vector<VertexAttrib> attribs;
 
       void buildVertexArray() {
 
@@ -157,6 +160,18 @@ namespace gl2df {
           glDrawElements(GL_TRIANGLES, this->elementCount, GL_UNSIGNED_INT, (void*)(stride * sizeof(unsigned int)));
         else glDrawArrays(GL_TRIANGLES, stride, this->elementCount);
       }
+
+      void instanceDraw(int amount, int stride = 0) const {
+        glBindVertexArray(this->VAO);
+        instanceDrawNOBIND(amount, stride);
+      }
+      
+      void instanceDrawNOBIND(int amount, int stride = 0) const {
+        if(this->usingElementArray) 
+          glDrawElementsInstanced(GL_TRIANGLES, this->elementCount, GL_UNSIGNED_INT, (void*)(stride * sizeof(unsigned int)), amount);
+        else glDrawArraysInstanced(GL_TRIANGLES, stride, this->elementCount, amount);
+      }
+
       void bind() const {
         glBindVertexArray(this->VAO);
       }

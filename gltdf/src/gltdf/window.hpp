@@ -28,7 +28,7 @@ namespace gltdf {
 
       Window(std::string windowTitle = "", int height = 600, int width = 800) 
       : windowTitle(windowTitle), height(height), width(width), lastX(width / 2), 
-        lastY(height / 2), firstMouse(true), deltaTime(0.0f), lastFrame(0.0f) {
+        lastY(height / 2), firstMouse(true), deltaTime(1.0f), lastFrame(0.0f) {
         this->glfwWindow = glfwCreateWindow(this->width, this->height, this->windowTitle.c_str(), nullptr, nullptr);
         if(this->glfwWindow == nullptr)
           std::cout << "Failed to create GLFW window: " << this->windowTitle << std::endl;

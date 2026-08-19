@@ -10,6 +10,6 @@ find_package(OpenGL REQUIRED)
 
 add_subdirectory(gltdf)
 
-add_executable(craftmine main.cpp player.hpp)
+add_executable(craftmine main.cpp player.hpp block.hpp)
 
 target_link_libraries(craftmine gltdf OpenGL::GL glad glfw stb glm assimp)

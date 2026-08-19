@@ -1,8 +1,10 @@
+#include "glm/detail/qualifier.hpp"
 #include "glm/ext/matrix_transform.hpp"
 #include <gltdf/gltdf.hpp>
 #include <gl3df/gl3df.hpp>
 #include <gl2df/gl2df.hpp>
 #include "player.hpp"
+#include "block.hpp"
 #include <iostream>
 
 void processInput(const gltdf::Window& window) {
@@ -63,7 +65,8 @@ int main() {
   window.setAutoResizeFrameBuffer();
   glfwSetInputMode(window.glfwWindow, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 
-  gl3df::Camera camera(glm::vec3(0.0f, 0.0f, 3.0f));
+  gl3df::Camera camera(glm::vec3(0.0f, 0.0f, 3.0f), glm::vec3(0.0f, 1.0f, 0.0f),
+             gl3df::YAW, gl3df::PITCH, gl3df::SPEED * 5, gl3df::SENSITIVITY, gl3df::ZOOM);
 
 
   window.setCustomUserPtr(&camera);
@@ -145,63 +148,16 @@ int main() {
   gl2df::VertexArray skyboxVertexArr(skyboxVertices, {}, {{0, 3, 3 * sizeof(float), 0}});
 
   gltdf::Shader skyboxShader("skybox/vertex.glsl", "skybox/fragment.glsl");
-  gltdf::Shader blockShader("block/vertex.glsl", "block/fragment.glsl");
 
-  gl2df::Texture dirtTexture("grass/dirt.png");
-
-  std::vector<float> blockVertices = {
-    // positions          // texCoords
-    -1.0f,  1.0f, -1.0f,   0.0f, 1.0f,
-    -1.0f, -1.0f, -1.0f,   0.0f, 0.0f,
-     1.0f, -1.0f, -1.0f,   1.0f, 0.0f,
-     1.0f, -1.0f, -1.0f,   1.0f, 0.0f,
-     1.0f,  1.0f, -1.0f,   1.0f, 1.0f,
-    -1.0f,  1.0f, -1.0f,   0.0f, 1.0f,
-
-    -1.0f, -1.0f,  1.0f,   0.0f, 1.0f,
-    -1.0f, -1.0f, -1.0f,   0.0f, 0.0f,
-    -1.0f,  1.0f, -1.0f,   1.0f, 0.0f,
-    -1.0f,  1.0f, -1.0f,   1.0f, 0.0f,
-    -1.0f,  1.0f,  1.0f,   1.0f, 1.0f,
-    -1.0f, -1.0f,  1.0f,   0.0f, 1.0f,
-
-     1.0f, -1.0f, -1.0f,   0.0f, 0.0f,
-     1.0f, -1.0f,  1.0f,   0.0f, 1.0f,
-     1.0f,  1.0f,  1.0f,   1.0f, 1.0f,
-     1.0f,  1.0f,  1.0f,   1.0f, 1.0f,
-     1.0f,  1.0f, -1.0f,   1.0f, 0.0f,
-     1.0f, -1.0f, -1.0f,   0.0f, 0.0f,
-
-    -1.0f, -1.0f,  1.0f,   0.0f, 0.0f,
-    -1.0f,  1.0f,  1.0f,   0.0f, 1.0f,
-     1.0f,  1.0f,  1.0f,   1.0f, 1.0f,
-     1.0f,  1.0f,  1.0f,   1.0f, 1.0f,
-     1.0f, -1.0f,  1.0f,   1.0f, 0.0f,
-    -1.0f, -1.0f,  1.0f,   0.0f, 0.0f,
-
-    -1.0f,  1.0f, -1.0f,   0.0f, 0.0f,
-     1.0f,  1.0f, -1.0f,   1.0f, 0.0f,
-     1.0f,  1.0f,  1.0f,   1.0f, 1.0f,
-     1.0f,  1.0f,  1.0f,   1.0f, 1.0f,
-    -1.0f,  1.0f,  1.0f,   0.0f, 1.0f,
-    -1.0f,  1.0f, -1.0f,   0.0f, 0.0f,
-
-    -1.0f, -1.0f, -1.0f,   0.0f, 0.0f,
-    -1.0f, -1.0f,  1.0f,   0.0f, 1.0f,
-     1.0f, -1.0f, -1.0f,   1.0f, 0.0f,
-     1.0f, -1.0f, -1.0f,   1.0f, 0.0f,
-    -1.0f, -1.0f,  1.0f,   0.0f, 1.0f,
-     1.0f, -1.0f,  1.0f,   1.0f, 1.0f  
-  };
-
-  gl2df::VertexArray blockVertexArr(blockVertices, {}, {{0, 3, 5 * sizeof(float), 0},
-                                    {1, 2, 5 * sizeof(float), 3 * sizeof(float)}});
-
-  
   Player player;
 
+  Block block("grass/dirt.png", {});
 
-  player.bindToGeneralUBO(blockShader, "vp");
+  for(int i = 0; i < 20; i++)
+    for(int j = 0; j < 20; j++)
+      block.modelList.push_back(glm::translate(glm::mat4(1.0f), glm::vec3(i * 2.0f, 0.0f, j * 2.0f)));
+
+  player.bindToGeneralUBO(block.sprite.shader, "vp");
   player.bindToskyboxUBO(skyboxShader, "vp");
 
   glEnable(GL_DEPTH_TEST);
@@ -218,12 +174,7 @@ int main() {
     glm::mat4 projection = glm::perspective(glm::radians(camera.zoom), (float)window.width / (float)window.height, 0.1f, 100.0f);
     
     player.updateUBO(view, projection);
-
-    dirtTexture.bind();
-    blockShader.bind();
-    blockShader.setMat4NOBIND("model", glm::translate(glm::mat4(1.0f), glm::vec3(2.0f, 4.0f, 2.0f)));
-    blockVertexArr.draw();
-
+    block.draw();
 
     glBindTexture(GL_TEXTURE_CUBE_MAP, skyboxTexture);
     glDepthMask(GL_FALSE);
