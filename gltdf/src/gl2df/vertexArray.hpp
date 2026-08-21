@@ -175,6 +175,7 @@ namespace gl2df {
       void bind() const {
         glBindVertexArray(this->VAO);
       }
+      
 
   };
 

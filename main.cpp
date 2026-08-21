@@ -63,7 +63,7 @@ int main() {
   gltdf::Window window("craftmine setup", 600, 800);
   window.makeCurrent();
   window.setAutoResizeFrameBuffer();
-  glfwSetInputMode(window.glfwWindow, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+  // glfwSetInputMode(window.glfwWindow, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 
   gl3df::Camera camera(glm::vec3(0.0f, 0.0f, 3.0f), glm::vec3(0.0f, 1.0f, 0.0f),
              gl3df::YAW, gl3df::PITCH, gl3df::SPEED * 5, gl3df::SENSITIVITY, gl3df::ZOOM);
@@ -151,11 +151,11 @@ int main() {
 
   Player player;
 
-  Block block("grass/dirt.png", {});
+  Block block("grass/dirt.png", {glm::vec3(0.0f, -10.0f, 0.0f)});
 
-  for(int i = 0; i < 20; i++)
-    for(int j = 0; j < 20; j++)
-      block.modelList.push_back(glm::translate(glm::mat4(1.0f), glm::vec3(i * 2.0f, 0.0f, j * 2.0f)));
+  // for(int i = 0; i < 20; i++)
+  //   for(int j = 0; j < 20; j++)
+      // block.modelList.push_back(glm::translate(glm::mat4(1.0f), glm::vec3(i * 2.0f, -10.0f, j * 2.0f)));
 
   player.bindToGeneralUBO(block.sprite.shader, "vp");
   player.bindToskyboxUBO(skyboxShader, "vp");
