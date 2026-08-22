@@ -63,7 +63,7 @@ int main() {
   gltdf::Window window("craftmine setup", 600, 800);
   window.makeCurrent();
   window.setAutoResizeFrameBuffer();
-  // glfwSetInputMode(window.glfwWindow, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+  glfwSetInputMode(window.glfwWindow, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 
   gl3df::Camera camera(glm::vec3(0.0f, 0.0f, 3.0f), glm::vec3(0.0f, 1.0f, 0.0f),
              gl3df::YAW, gl3df::PITCH, gl3df::SPEED * 5, gl3df::SENSITIVITY, gl3df::ZOOM);
@@ -151,11 +151,38 @@ int main() {
 
   Player player;
 
-  Block block("grass/dirt.png", {glm::vec3(0.0f, -10.0f, 0.0f)});
+  Block block("grass/dirt.png", {glm::ivec3(0, -10, 0)});
+  for(int i = 0; i < 200; i++)
+    for(int j = 0; j < 200; j++)
+      block.add(glm::ivec3(i * 2, -22, j * 2));
+  for(int i = 0; i < 200; i++)
+    for(int j = 0; j < 200; j++)
+      block.add(glm::ivec3(i * 2, -20, j * 2));
+  for(int i = 0; i < 200; i++)
+    for(int j = 0; j < 200; j++)
+      block.add(glm::ivec3(i * 2, -18, j * 2));
+  for(int i = 0; i < 200; i++)
+    for(int j = 0; j < 200; j++)
+      block.add(glm::ivec3(i * 2, -16, j * 2));
+  for(int i = 0; i < 200; i++)
+    for(int j = 0; j < 200; j++)
+      block.add(glm::ivec3(i * 2, -14, j * 2));
+  for(int i = 0; i < 200; i++)
+    for(int j = 0; j < 200; j++)
+      block.add(glm::ivec3(i * 2, -12, j * 2));
+  for(int i = 0; i < 200; i++)
+    for(int j = 0; j < 200; j++)
+      block.add(glm::ivec3(i * 2, -10, j * 2));
+  for(int i = 0; i < 200; i++)
+    for(int j = 0; j < 200; j++)
+      block.add(glm::ivec3(i * 2, -8, j * 2));
+  for(int i = 0; i < 200; i++)
+    for(int j = 0; j < 200; j++)
+      block.add(glm::ivec3(i * 2, -6, j * 2));
+  for(int i = 0; i < 200; i++)
+    for(int j = 0; j < 200; j++)
+      block.add(glm::ivec3(i * 2, -4, j * 2));
 
-  // for(int i = 0; i < 20; i++)
-  //   for(int j = 0; j < 20; j++)
-      // block.modelList.push_back(glm::translate(glm::mat4(1.0f), glm::vec3(i * 2.0f, -10.0f, j * 2.0f)));
 
   player.bindToGeneralUBO(block.sprite.shader, "vp");
   player.bindToskyboxUBO(skyboxShader, "vp");
@@ -171,7 +198,7 @@ int main() {
     processInput(window);
 
     glm::mat4 view = camera.getViewMatrix();
-    glm::mat4 projection = glm::perspective(glm::radians(camera.zoom), (float)window.width / (float)window.height, 0.1f, 100.0f);
+    glm::mat4 projection = glm::perspective(glm::radians(camera.zoom), (float)window.width / (float)window.height, 0.1f, 1000.0f);
     
     player.updateUBO(view, projection);
     block.draw();
