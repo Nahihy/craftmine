@@ -4,8 +4,10 @@
 #include <gl3df/gl3df.hpp>
 #include <gl2df/gl2df.hpp>
 #include "player.hpp"
-#include "block.hpp"
+// #include "block.hpp"
 #include <iostream>
+#include <unordered_map>
+#include "world.hpp"
 
 void processInput(const gltdf::Window& window) {
   if (glfwGetKey(window.glfwWindow, GLFW_KEY_W) == GLFW_PRESS)
@@ -60,7 +62,7 @@ int main() {
 
   gltdf::initWindowSystem();
 
-  gltdf::Window window("craftmine setup", 600, 800);
+  gltdf::Window window("craftmine", 600, 800);
   window.makeCurrent();
   window.setAutoResizeFrameBuffer();
   glfwSetInputMode(window.glfwWindow, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
@@ -151,40 +153,15 @@ int main() {
 
   Player player;
 
-  Block block("grass/dirt.png", {glm::ivec3(0, -10, 0)});
-  for(int i = 0; i < 200; i++)
-    for(int j = 0; j < 200; j++)
-      block.add(glm::ivec3(i * 2, -22, j * 2));
-  for(int i = 0; i < 200; i++)
-    for(int j = 0; j < 200; j++)
-      block.add(glm::ivec3(i * 2, -20, j * 2));
-  for(int i = 0; i < 200; i++)
-    for(int j = 0; j < 200; j++)
-      block.add(glm::ivec3(i * 2, -18, j * 2));
-  for(int i = 0; i < 200; i++)
-    for(int j = 0; j < 200; j++)
-      block.add(glm::ivec3(i * 2, -16, j * 2));
-  for(int i = 0; i < 200; i++)
-    for(int j = 0; j < 200; j++)
-      block.add(glm::ivec3(i * 2, -14, j * 2));
-  for(int i = 0; i < 200; i++)
-    for(int j = 0; j < 200; j++)
-      block.add(glm::ivec3(i * 2, -12, j * 2));
-  for(int i = 0; i < 200; i++)
-    for(int j = 0; j < 200; j++)
-      block.add(glm::ivec3(i * 2, -10, j * 2));
-  for(int i = 0; i < 200; i++)
-    for(int j = 0; j < 200; j++)
-      block.add(glm::ivec3(i * 2, -8, j * 2));
-  for(int i = 0; i < 200; i++)
-    for(int j = 0; j < 200; j++)
-      block.add(glm::ivec3(i * 2, -6, j * 2));
-  for(int i = 0; i < 200; i++)
-    for(int j = 0; j < 200; j++)
-      block.add(glm::ivec3(i * 2, -4, j * 2));
+  World world;
+  world.chunks[glm::ivec3(3, 3, 3)];
+  world.chunks[glm::ivec3(2, 1, 4)];
+  world.chunks[glm::ivec3(8, 2, 6)];
+  world.chunks[glm::ivec3(2, 2, 2)];
+  world.chunks[glm::ivec3(3, 2, 3)];
 
 
-  player.bindToGeneralUBO(block.sprite.shader, "vp");
+  player.bindToGeneralUBO(world.blockShader, "vp");
   player.bindToskyboxUBO(skyboxShader, "vp");
 
   glEnable(GL_DEPTH_TEST);
@@ -201,7 +178,7 @@ int main() {
     glm::mat4 projection = glm::perspective(glm::radians(camera.zoom), (float)window.width / (float)window.height, 0.1f, 1000.0f);
     
     player.updateUBO(view, projection);
-    block.draw();
+    world.draw();
 
     glBindTexture(GL_TEXTURE_CUBE_MAP, skyboxTexture);
     glDepthMask(GL_FALSE);

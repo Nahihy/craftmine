@@ -5,7 +5,7 @@ layout (location = 2) in ivec3 aModel;
 
 out vec2 fTexCoord;
 
-uniform mat4 models[1024];
+uniform ivec3 chunkLoc;
 
 layout (std140) uniform vp {
   mat4 view;
@@ -14,7 +14,7 @@ layout (std140) uniform vp {
 
 void main() {
   mat4 model = mat4(1.0f);
-  model[3] = vec4(vec3(aModel), 1.0f);
+  model[3] = vec4(vec3(aModel + chunkLoc * 32), 1.0f);
   gl_Position = projection * view * model * vec4(aPos, 1.0f);
   fTexCoord = aTexCoords;
 }
