@@ -1,10 +1,8 @@
 #include "glm/detail/qualifier.hpp"
 #include "glm/ext/matrix_transform.hpp"
 #include <gltdf/gltdf.hpp>
-#include <gl3df/gl3df.hpp>
 #include <gl2df/gl2df.hpp>
 #include "player.hpp"
-// #include "block.hpp"
 #include <iostream>
 #include <unordered_map>
 #include "world.hpp"
@@ -91,17 +89,6 @@ int main() {
   };
 
   unsigned int skyboxTexture = loadCubemap(skyboxFaces); 
-
-  std::vector<std::string> grassFaces = {
-    "assets/textures/grass/grass_block_side_overlay.png",
-    "assets/textures/grass/grass_block_side_overlay.png",
-    "assets/textures/grass/grass_block_top.png",
-    "assets/textures/grass/dirt.png",
-    "assets/textures/grass/grass_block_side_overlay.png",
-    "assets/textures/grass/grass_block_side_overlay.png"
-  };
-
-  unsigned int grassTexture = loadCubemap(grassFaces); 
 
   std::vector<float> skyboxVertices = {
     -1.0f,  1.0f, -1.0f,

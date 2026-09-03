@@ -1,9 +1,10 @@
 #version 330 core
 
 in vec2 fTexCoord;
+flat in int fSelectedTex;
 
-uniform sampler2D tex[1];
+uniform sampler2DArray tex;
 
 void main() {
-  gl_FragColor = texture(tex[0], fTexCoord);
+  gl_FragColor = texture(tex, vec3(fTexCoord, fSelectedTex));
 }
