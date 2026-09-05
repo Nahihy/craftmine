@@ -71,11 +71,20 @@ enum BlockType {
   DIRT, GRASS, AIR
 };
 
-struct Block {
-  glm::ivec3 loc;
-  BlockType type;
+enum Faceloc {
+  POSITIVE_Z = 0,
+  POSITIVE_Y = 1,
+  NEGATIVE_Z = 2,
+  NEGATIVE_Y = 3,
+  POSITIVE_X = 4,
+  NEGATIVE_X = 6
+};
 
-  Block(BlockType type, int x, int y, int z) : type(type), loc(x, y, z) {}
+struct Block {
+  glm::ivec4 loc;
+  BlockType tex;
+
+  Block(BlockType tex, int x, int y, int z, int f) : tex(tex), loc(x, y, z, f) {}
 
 };
 
@@ -89,14 +98,14 @@ constexpr char* blockTexs[AIR] = {
 class Chunk {
   public:
     std::vector<Block> blockList;
-    // std::vector<glm::ivec3> blockVertices;
+    std::vector<Block> blockVertices;
 
     Chunk() {
       this->blockList.reserve(4096);
       for(int i = 0; i < 16; i++)
         for(int j = 0; j < 16; j++)
           for(int k = 0; k < 16; k++)
-            this->blockList.emplace_back(k % 2 == 0 ? DIRT : GRASS, i * 2, j * 2, k * 2);
+            this->blockList.emplace_back(k % 2 == 0 ? DIRT : GRASS, i * 2, j * 2, k * 2, POSITIVE_X);
       glGenBuffers(1, &this->VBO);
       glBindBuffer(GL_ARRAY_BUFFER, this->VBO);
       glBufferData(GL_ARRAY_BUFFER, 4096 * sizeof(Block), this->blockList.data(), GL_DYNAMIC_DRAW);
@@ -106,8 +115,8 @@ class Chunk {
     void draw(const gl2df::VertexArray& vertArr) const {
       vertArr.bind();
       glBindBuffer(GL_ARRAY_BUFFER, this->VBO);
-      glVertexAttribIPointer(2, 3, GL_INT, sizeof(Block), (void*)0);
-      glVertexAttribIPointer(3, 1, GL_INT, sizeof(Block), (void*)offsetof(Block, type));
+      glVertexAttribIPointer(2, 4, GL_INT, sizeof(Block), (void*)offsetof(Block, loc));
+      glVertexAttribIPointer(3, 1, GL_INT, sizeof(Block), (void*)offsetof(Block, tex));
       vertArr.instanceDrawNOBIND(this->blockList.size());
     }
 
@@ -124,7 +133,7 @@ class World {
     gl2df::VertexArray blockVertices;
     gltdf::Shader blockShader;
 
-    World() : blockVertices(gl2df::VertexArray({BLOCK_VERTICES}, {}, {{0, 3, 5 * sizeof(float), 0}, 
+    World() : blockVertices(gl2df::VertexArray({BLOCK_FACE_VERTICES}, {}, {{0, 3, 5 * sizeof(float), 0}, 
     {1, 2, 5 * sizeof(float), 3 * sizeof(float)}})), blockShader(gltdf::Shader("block/vertex.glsl", "block/fragment.glsl")) {
       this->blockShader.bind();
       char uniBuff[8];

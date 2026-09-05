@@ -1,5 +1,6 @@
 #include "glm/detail/qualifier.hpp"
 #include "glm/ext/matrix_transform.hpp"
+#include <cstdio>
 #include <gltdf/gltdf.hpp>
 #include <gl2df/gl2df.hpp>
 #include "player.hpp"
