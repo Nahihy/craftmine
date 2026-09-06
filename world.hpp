@@ -18,6 +18,8 @@ struct IVec3Hash {
   }
 };
 
+#define CHUNK_SIZE 16
+
 #define BLOCK_FACE_VERTICES {\
   -1.0f,  1.0f, -1.0f,   0.0f, 1.0f,\
   -1.0f, -1.0f, -1.0f,   0.0f, 0.0f,\
@@ -27,48 +29,13 @@ struct IVec3Hash {
   -1.0f,  1.0f, -1.0f,   0.0f, 1.0f,\
 }
 
-#define BLOCK_VERTICES {\
-  -1.0f,  1.0f, -1.0f,   0.0f, 1.0f,\
-  -1.0f, -1.0f, -1.0f,   0.0f, 0.0f,\
-   1.0f, -1.0f, -1.0f,   1.0f, 0.0f,\
-   1.0f, -1.0f, -1.0f,   1.0f, 0.0f,\
-   1.0f,  1.0f, -1.0f,   1.0f, 1.0f,\
-  -1.0f,  1.0f, -1.0f,   0.0f, 1.0f,\
-  -1.0f, -1.0f,  1.0f,   0.0f, 1.0f,\
-  -1.0f, -1.0f, -1.0f,   0.0f, 0.0f,\
-  -1.0f,  1.0f, -1.0f,   1.0f, 0.0f,\
-  -1.0f,  1.0f, -1.0f,   1.0f, 0.0f,\
-  -1.0f,  1.0f,  1.0f,   1.0f, 1.0f,\
-  -1.0f, -1.0f,  1.0f,   0.0f, 1.0f,\
-   1.0f, -1.0f, -1.0f,   0.0f, 0.0f,\
-   1.0f, -1.0f,  1.0f,   0.0f, 1.0f,\
-   1.0f,  1.0f,  1.0f,   1.0f, 1.0f,\
-   1.0f,  1.0f,  1.0f,   1.0f, 1.0f,\
-   1.0f,  1.0f, -1.0f,   1.0f, 0.0f,\
-   1.0f, -1.0f, -1.0f,   0.0f, 0.0f,\
-  -1.0f, -1.0f,  1.0f,   0.0f, 0.0f,\
-  -1.0f,  1.0f,  1.0f,   0.0f, 1.0f,\
-   1.0f,  1.0f,  1.0f,   1.0f, 1.0f,\
-   1.0f,  1.0f,  1.0f,   1.0f, 1.0f,\
-   1.0f, -1.0f,  1.0f,   1.0f, 0.0f,\
-  -1.0f, -1.0f,  1.0f,   0.0f, 0.0f,\
-  -1.0f,  1.0f, -1.0f,   0.0f, 0.0f,\
-   1.0f,  1.0f, -1.0f,   1.0f, 0.0f,\
-   1.0f,  1.0f,  1.0f,   1.0f, 1.0f,\
-   1.0f,  1.0f,  1.0f,   1.0f, 1.0f,\
-  -1.0f,  1.0f,  1.0f,   0.0f, 1.0f,\
-  -1.0f,  1.0f, -1.0f,   0.0f, 0.0f,\
-  -1.0f, -1.0f, -1.0f,   0.0f, 0.0f,\
-  -1.0f, -1.0f,  1.0f,   0.0f, 1.0f,\
-   1.0f, -1.0f, -1.0f,   1.0f, 0.0f,\
-   1.0f, -1.0f, -1.0f,   1.0f, 0.0f,\
-  -1.0f, -1.0f,  1.0f,   0.0f, 1.0f,\
-   1.0f, -1.0f,  1.0f,   1.0f, 1.0f\
-}
-
-
 enum BlockType {
   DIRT, GRASS, AIR
+};
+
+constexpr char* blockTexs[AIR] = {
+  "assets/textures/dirt.png",
+  "assets/textures/grass.png"
 };
 
 enum Faceloc {
@@ -88,38 +55,36 @@ struct BlockFace {
 
 };
 
-constexpr char* blockTexs[AIR] = {
-  "assets/textures/dirt.png",
-  "assets/textures/grass.png"
-};
-
 
 
 class Chunk {
   public:
-    std::vector<BlockType> blockList;
+    std::array<BlockType, CHUNK_SIZE * CHUNK_SIZE * CHUNK_SIZE> blockList;
     std::vector<BlockFace> visableFaces;
     bool dirty = true;
 
     Chunk() {
-      this->blockList.reserve(4096);
-      for(int i = 0; i < 16; i++)
-        for(int j = 0; j < 16; j++)
-          for(int k = 0; k < 16; k++)
-            this->blockList.emplace_back(k % 2 == 0 ? DIRT : GRASS);
-      this->blockList[locAt(10, 5, 12)] = AIR;
-      this->blockList[locAt(15, 5, 12)] = AIR;
+      for(int x = 0; x < CHUNK_SIZE; x++)
+        for(int y = 0; y < CHUNK_SIZE; y++)
+          for(int z = 0; z < CHUNK_SIZE; z++)
+            this->blockList[indexAt(x, y, z)] = z % 2 == 0 ? DIRT : GRASS;
+      this->blockList[indexAt(10, 5, 12)] = AIR;
+      this->blockList[indexAt(15, 5, 12)] = AIR;
       glGenBuffers(1, &this->VBO);
     }
 
-    int inline locAt(int x, int y, int z) const {
-      if(x >= 16 || y >= 16 || z >= 16 || x < 0 || y < 0 || z < 0) return -1;
-      return (x + y * 16 + z * 16 * 16);
+    ~Chunk() {
+      glDeleteBuffers(1, &VBO);
+    }
+
+    int inline indexAt(int x, int y, int z) const {
+      if(x >= CHUNK_SIZE || y >= CHUNK_SIZE || z >= CHUNK_SIZE || x < 0 || y < 0 || z < 0) return -1;
+      return (x + y * CHUNK_SIZE + z * CHUNK_SIZE * CHUNK_SIZE);
     }
 
     BlockType inline blockAt(int x, int y, int z) const {
-      if(x >= 16 || y >= 16 || z >= 16 || x < 0 || y < 0 || z < 0) return AIR;
-      return this->blockList[locAt(x, y, z)];
+      if(x >= CHUNK_SIZE || y >= CHUNK_SIZE || z >= CHUNK_SIZE || x < 0 || y < 0 || z < 0) return AIR;
+      return this->blockList[indexAt(x, y, z)];
     }
 
     void draw(const gl2df::VertexArray& vertArr) {
@@ -138,9 +103,12 @@ class Chunk {
     unsigned int VBO;
 
     void updateFaces() {
-      for(int x = 0; x < 16; x++)
-        for(int y = 0; y < 16; y++)
-          for(int z = 0; z < 16; z++) {
+      int oldSize = this->visableFaces.size();
+      this->visableFaces.clear();
+      this->visableFaces.reserve(oldSize);
+      for(int x = 0; x < CHUNK_SIZE; x++)
+        for(int y = 0; y < CHUNK_SIZE; y++)
+          for(int z = 0; z < CHUNK_SIZE; z++) {
             if(blockAt(x, y, z) == AIR) continue;
             if(blockAt(x, y, z - 1) == AIR) this->visableFaces.emplace_back(blockAt(x, y, z), x * 2, y * 2, z * 2, NEGATIVE_Z);
             if(blockAt(x, y, z + 1) == AIR) this->visableFaces.emplace_back(blockAt(x, y, z), x * 2, y * 2, z * 2, POSITIVE_Z);
@@ -152,7 +120,6 @@ class Chunk {
       glBindBuffer(GL_ARRAY_BUFFER, this->VBO);
       glBufferData(GL_ARRAY_BUFFER, this->visableFaces.size() * sizeof(BlockFace), this->visableFaces.data(), GL_DYNAMIC_DRAW);
       this->dirty = false;
-      puts("cleaned");
     }
 
 };
