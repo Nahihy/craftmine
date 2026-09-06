@@ -155,6 +155,7 @@ int main() {
   glEnable(GL_DEPTH_TEST);
   glDepthFunc(GL_LEQUAL);
 
+
   while(!window.shouldClose()) {
     window.updateDeltaTime();
     glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
@@ -164,7 +165,7 @@ int main() {
 
     glm::mat4 view = camera.getViewMatrix();
     glm::mat4 projection = glm::perspective(glm::radians(camera.zoom), (float)window.width / (float)window.height, 0.1f, 1000.0f);
-    
+      
     player.updateUBO(view, projection);
     world.draw();
 

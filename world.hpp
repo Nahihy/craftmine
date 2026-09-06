@@ -182,10 +182,14 @@ class World {
     void draw() {
       this->blockShader.bind();
       glBindTexture(GL_TEXTURE_2D_ARRAY, this->textures);
+      glEnable(GL_CULL_FACE);
+      glCullFace(GL_BACK);
+      glFrontFace(GL_CW);
       for(auto& [loc, chunk] : this->chunks) {
         this->blockShader.setIVec3NOBIND("chunkLoc", loc);
         chunk.draw(this->blockVertices);
       }
+      glDisable(GL_CULL_FACE);
     }
  
   private:
