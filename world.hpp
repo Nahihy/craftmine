@@ -72,19 +72,19 @@ enum BlockType {
 };
 
 enum Faceloc {
-  POSITIVE_Z = 0,
-  POSITIVE_Y = 1,
-  NEGATIVE_Z = 2,
-  NEGATIVE_Y = 3,
+  NEGATIVE_Z = 0,
+  NEGATIVE_Y = 1,
+  POSITIVE_Z = 2,
+  POSITIVE_Y = 3,
   POSITIVE_X = 4,
   NEGATIVE_X = 6
 };
 
-struct Block {
+struct BlockFace {
   glm::ivec4 loc;
   BlockType tex;
 
-  Block(BlockType tex, int x, int y, int z, int f) : tex(tex), loc(x, y, z, f) {}
+  BlockFace(BlockType tex, int x, int y, int z, int f) : tex(tex), loc(x, y, z, f) {}
 
 };
 
@@ -97,32 +97,63 @@ constexpr char* blockTexs[AIR] = {
 
 class Chunk {
   public:
-    std::vector<Block> blockList;
-    std::vector<Block> blockVertices;
+    std::vector<BlockType> blockList;
+    std::vector<BlockFace> visableFaces;
+    bool dirty = true;
 
     Chunk() {
       this->blockList.reserve(4096);
       for(int i = 0; i < 16; i++)
         for(int j = 0; j < 16; j++)
           for(int k = 0; k < 16; k++)
-            this->blockList.emplace_back(k % 2 == 0 ? DIRT : GRASS, i * 2, j * 2, k * 2, POSITIVE_X);
+            this->blockList.emplace_back(k % 2 == 0 ? DIRT : GRASS);
+      this->blockList[locAt(10, 5, 12)] = AIR;
+      this->blockList[locAt(15, 5, 12)] = AIR;
       glGenBuffers(1, &this->VBO);
-      glBindBuffer(GL_ARRAY_BUFFER, this->VBO);
-      glBufferData(GL_ARRAY_BUFFER, 4096 * sizeof(Block), this->blockList.data(), GL_DYNAMIC_DRAW);
     }
 
+    int inline locAt(int x, int y, int z) const {
+      if(x >= 16 || y >= 16 || z >= 16 || x < 0 || y < 0 || z < 0) return -1;
+      return (x + y * 16 + z * 16 * 16);
+    }
 
-    void draw(const gl2df::VertexArray& vertArr) const {
+    BlockType inline blockAt(int x, int y, int z) const {
+      if(x >= 16 || y >= 16 || z >= 16 || x < 0 || y < 0 || z < 0) return AIR;
+      return this->blockList[locAt(x, y, z)];
+    }
+
+    void draw(const gl2df::VertexArray& vertArr) {
+      if(this->dirty) updateFaces();
       vertArr.bind();
       glBindBuffer(GL_ARRAY_BUFFER, this->VBO);
-      glVertexAttribIPointer(2, 4, GL_INT, sizeof(Block), (void*)offsetof(Block, loc));
-      glVertexAttribIPointer(3, 1, GL_INT, sizeof(Block), (void*)offsetof(Block, tex));
-      vertArr.instanceDrawNOBIND(this->blockList.size());
+      glVertexAttribIPointer(2, 4, GL_INT, sizeof(BlockFace), (void*)offsetof(BlockFace, loc));
+      glVertexAttribIPointer(3, 1, GL_INT, sizeof(BlockFace), (void*)offsetof(BlockFace, tex));
+      vertArr.instanceDrawNOBIND(this->visableFaces.size());
     }
+
+    
 
   private:
 
     unsigned int VBO;
+
+    void updateFaces() {
+      for(int x = 0; x < 16; x++)
+        for(int y = 0; y < 16; y++)
+          for(int z = 0; z < 16; z++) {
+            if(blockAt(x, y, z) == AIR) continue;
+            if(blockAt(x, y, z - 1) == AIR) this->visableFaces.emplace_back(blockAt(x, y, z), x * 2, y * 2, z * 2, NEGATIVE_Z);
+            if(blockAt(x, y, z + 1) == AIR) this->visableFaces.emplace_back(blockAt(x, y, z), x * 2, y * 2, z * 2, POSITIVE_Z);
+            if(blockAt(x, y - 1, z) == AIR) this->visableFaces.emplace_back(blockAt(x, y, z), x * 2, y * 2, z * 2, NEGATIVE_Y);
+            if(blockAt(x, y + 1, z) == AIR) this->visableFaces.emplace_back(blockAt(x, y, z), x * 2, y * 2, z * 2, POSITIVE_Y);
+            if(blockAt(x - 1, y, z) == AIR) this->visableFaces.emplace_back(blockAt(x, y, z), x * 2, y * 2, z * 2, NEGATIVE_X);
+            if(blockAt(x + 1, y, z) == AIR) this->visableFaces.emplace_back(blockAt(x, y, z), x * 2, y * 2, z * 2, POSITIVE_X);
+          }
+      glBindBuffer(GL_ARRAY_BUFFER, this->VBO);
+      glBufferData(GL_ARRAY_BUFFER, this->visableFaces.size() * sizeof(BlockFace), this->visableFaces.data(), GL_DYNAMIC_DRAW);
+      this->dirty = false;
+      puts("cleaned");
+    }
 
 };
 
@@ -151,7 +182,7 @@ class World {
     void draw() {
       this->blockShader.bind();
       glBindTexture(GL_TEXTURE_2D_ARRAY, this->textures);
-      for(const auto& [loc, chunk] : this->chunks) {
+      for(auto& [loc, chunk] : this->chunks) {
         this->blockShader.setIVec3NOBIND("chunkLoc", loc);
         chunk.draw(this->blockVertices);
       }
