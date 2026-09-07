@@ -34,8 +34,8 @@ enum BlockType {
 };
 
 constexpr char* blockTexs[AIR] = {
-  "assets/textures/dirt.png",
-  "assets/textures/grass.png"
+  TEXTURE_BINARY_DIR"/blocks/dirt.png",
+  TEXTURE_BINARY_DIR"/blocks/grass.png"
 };
 
 enum Faceloc {
