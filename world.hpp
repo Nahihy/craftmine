@@ -1,24 +1,27 @@
+#include "fastnoiseLite.hpp"
 #include "glm/ext/matrix_transform.hpp"
 #include <cstddef>
 #include <cstdint>
 #include <cstdio>
+#include <cstdlib>
 #include <gltdf/gltdf.hpp>
 #include <gl2df/gl2df.hpp>
 #include <unordered_map>
 #include <utility>
 #include <vector>
 
-struct IVec3Hash {
-  std::size_t operator()(const glm::ivec3& v) const noexcept {
+struct IVec2Hash {
+  std::size_t operator()(const glm::ivec2& v) const noexcept {
     std::size_t seed = 0;
     seed ^= std::hash<int>{}(v.x) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
     seed ^= std::hash<int>{}(v.y) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
-    seed ^= std::hash<int>{}(v.z) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
     return seed;
   }
 };
 
-#define CHUNK_SIZE 16
+#define RENDER_DIS 8
+#define CHUNK_WIDTH 16
+#define CHUNK_HEIGHT 128
 
 #define BLOCK_FACE_VERTICES {\
   -1.0f,  1.0f, -1.0f,   0.0f, 1.0f,\
@@ -59,17 +62,18 @@ struct BlockFace {
 
 class Chunk {
   public:
-    std::array<BlockType, CHUNK_SIZE * CHUNK_SIZE * CHUNK_SIZE> blockList;
+    std::array<BlockType, CHUNK_WIDTH * CHUNK_HEIGHT * CHUNK_WIDTH> blockList;
     std::vector<BlockFace> visableFaces;
     bool dirty = true;
 
-    Chunk() {
-      for(int x = 0; x < CHUNK_SIZE; x++)
-        for(int y = 0; y < CHUNK_SIZE; y++)
-          for(int z = 0; z < CHUNK_SIZE; z++)
-            this->blockList[indexAt(x, y, z)] = z % 2 == 0 ? DIRT : GRASS;
-      this->blockList[indexAt(10, 5, 12)] = AIR;
-      this->blockList[indexAt(15, 5, 12)] = AIR;
+    Chunk(const FastNoiseLite& noise, const glm::ivec2& loc) {
+      for(BlockType& b : this->blockList) b = AIR;
+      for(int x = 0; x < CHUNK_WIDTH; x++)
+        for(int z = 0; z < CHUNK_WIDTH; z++) {
+          int height = (noise.GetNoise((float)(x + loc.x * 16), (float)(z + loc.y * 16)) + 1) * 60;
+          for(int y = 0; y < height; y++)
+            this->blockList[indexAt(x, y, z)] = DIRT;
+        }
       glGenBuffers(1, &this->VBO);
     }
 
@@ -78,12 +82,12 @@ class Chunk {
     }
 
     int inline indexAt(int x, int y, int z) const {
-      if(x >= CHUNK_SIZE || y >= CHUNK_SIZE || z >= CHUNK_SIZE || x < 0 || y < 0 || z < 0) return -1;
-      return (x + y * CHUNK_SIZE + z * CHUNK_SIZE * CHUNK_SIZE);
+      if(x >= CHUNK_WIDTH || y >= CHUNK_HEIGHT || z >= CHUNK_WIDTH || x < 0 || y < 0 || z < 0) return -1;
+      return (x + y * CHUNK_WIDTH + z * CHUNK_WIDTH * CHUNK_HEIGHT);
     }
 
     BlockType inline blockAt(int x, int y, int z) const {
-      if(x >= CHUNK_SIZE || y >= CHUNK_SIZE || z >= CHUNK_SIZE || x < 0 || y < 0 || z < 0) return AIR;
+      if(x >= CHUNK_WIDTH || y >= CHUNK_HEIGHT || z >= CHUNK_WIDTH || x < 0 || y < 0 || z < 0) return AIR;
       return this->blockList[indexAt(x, y, z)];
     }
 
@@ -106,9 +110,9 @@ class Chunk {
       int oldSize = this->visableFaces.size();
       this->visableFaces.clear();
       this->visableFaces.reserve(oldSize);
-      for(int x = 0; x < CHUNK_SIZE; x++)
-        for(int y = 0; y < CHUNK_SIZE; y++)
-          for(int z = 0; z < CHUNK_SIZE; z++) {
+      for(int x = 0; x < CHUNK_WIDTH; x++)
+        for(int y = 0; y < CHUNK_HEIGHT; y++)
+          for(int z = 0; z < CHUNK_WIDTH; z++) {
             if(blockAt(x, y, z) == AIR) continue;
             if(blockAt(x, y, z - 1) == AIR) this->visableFaces.emplace_back(blockAt(x, y, z), x * 2, y * 2, z * 2, NEGATIVE_Z);
             if(blockAt(x, y, z + 1) == AIR) this->visableFaces.emplace_back(blockAt(x, y, z), x * 2, y * 2, z * 2, POSITIVE_Z);
@@ -127,13 +131,14 @@ class Chunk {
 class World {
 
   public:
-    std::unordered_map<glm::ivec3, Chunk, IVec3Hash> chunks;
+    std::unordered_map<glm::ivec2, Chunk, IVec2Hash> chunks;
     gl2df::VertexArray blockVertices;
     gltdf::Shader blockShader;
 
     World() : blockVertices(gl2df::VertexArray({BLOCK_FACE_VERTICES}, {}, {{0, 3, 5 * sizeof(float), 0}, 
     {1, 2, 5 * sizeof(float), 3 * sizeof(float)}})), blockShader(gltdf::Shader("block/vertex.glsl", "block/fragment.glsl")) {
-      this->blockShader.bind();
+      this->noise.SetNoiseType(FastNoiseLite::NoiseType_Perlin);
+      this->noise.SetSeed(rand());
       char uniBuff[8];
       this->blockVertices.bind();
       glVertexAttribDivisor(2, 1);
@@ -144,16 +149,22 @@ class World {
       loadTextureArray();
     }
 
+    ~World() {
+      glDeleteTextures(1, &this->textures);
+    }
 
-
-    void draw() {
+    void draw(const glm::ivec2& camLoc) {
+      if(this->camLoc != camLoc / 32) {
+        this->camLoc = camLoc / 32;
+        updateChunks();
+      }
       this->blockShader.bind();
       glBindTexture(GL_TEXTURE_2D_ARRAY, this->textures);
       glEnable(GL_CULL_FACE);
       glCullFace(GL_BACK);
       glFrontFace(GL_CW);
       for(auto& [loc, chunk] : this->chunks) {
-        this->blockShader.setIVec3NOBIND("chunkLoc", loc);
+        this->blockShader.setIVec2NOBIND("chunkLoc", loc);
         chunk.draw(this->blockVertices);
       }
       glDisable(GL_CULL_FACE);
@@ -162,6 +173,8 @@ class World {
   private:
 
     unsigned int textures;
+    glm::ivec2 camLoc;
+    FastNoiseLite noise;
 
     void loadTextureArray() {
       glGenTextures(1, &this->textures);
@@ -191,6 +204,35 @@ class World {
       glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
       glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_S, GL_REPEAT);
       glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    }
+
+    void updateChunks() {
+      this->chunks.clear();
+      this->chunks.reserve(((RENDER_DIS * 2) + 1) * ((RENDER_DIS * 2) + 1));
+      this->chunks.try_emplace(this->camLoc, this->noise, this->camLoc);
+      glm::ivec2 chunkLoc;
+      for(int x = 1; x <= RENDER_DIS; x++) {
+        chunkLoc = glm::ivec2(this->camLoc.x - x, this->camLoc.y);
+        this->chunks.try_emplace(chunkLoc, this->noise, chunkLoc);
+        chunkLoc = glm::ivec2(this->camLoc.x + x, this->camLoc.y);
+        this->chunks.try_emplace(chunkLoc, this->noise, chunkLoc);
+        for(int z = 1; z <= RENDER_DIS; z++) {
+          chunkLoc = glm::ivec2(this->camLoc.x - x, this->camLoc.y - z);
+          this->chunks.try_emplace(chunkLoc, this->noise, chunkLoc);
+          chunkLoc = glm::ivec2(this->camLoc.x + x, this->camLoc.y - z);
+          this->chunks.try_emplace(chunkLoc, this->noise, chunkLoc);
+          chunkLoc = glm::ivec2(this->camLoc.x - x, this->camLoc.y + z);
+          this->chunks.try_emplace(chunkLoc, this->noise, chunkLoc);
+          chunkLoc = glm::ivec2(this->camLoc.x + x, this->camLoc.y + z);
+          this->chunks.try_emplace(chunkLoc, this->noise, chunkLoc);
+        }
+      }
+      for(int z = 0; z <= RENDER_DIS; z++) {
+        chunkLoc = glm::ivec2(this->camLoc.x, this->camLoc.y - z);
+        this->chunks.try_emplace(chunkLoc, this->noise, chunkLoc);
+        chunkLoc = glm::ivec2(this->camLoc.x, this->camLoc.y + z);
+        this->chunks.try_emplace(chunkLoc, this->noise, chunkLoc);
+      }
     }
 
 };

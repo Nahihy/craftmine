@@ -7,7 +7,7 @@ layout (location = 3) in int aSelectedTex;
 out vec2 fTexCoord;
 flat out int fSelectedTex;
 
-uniform ivec3 chunkLoc;
+uniform ivec2 chunkLoc;
 
 layout (std140) uniform vp {
   mat4 view;
@@ -36,7 +36,7 @@ mat3 rotateY(float angle) {
 
 void main() {
   mat4 model = mat4(1.0f);
-  model[3] = vec4(vec3(aModel.xyz + chunkLoc * 32), 1.0f);
+  model[3] = vec4(vec3(aModel.xyz + ivec3(chunkLoc.x, 0, chunkLoc.y) * 32), 1.0f);
   vec3 pos;
   if(aModel.w <= 3) {
     pos = aPos * rotateX(radians(90 * aModel.w));

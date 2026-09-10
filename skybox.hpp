@@ -60,9 +60,8 @@ class SkyBox {
     gl2df::VertexArray vertArr;
     gltdf::Shader shader;
 
-    SkyBox() : shader("skybox/vertex.glsl", "skybox/fragment.glsl"), vertArr({SKYBOX_VERTICES}, {}, {{0, 3, 3 * sizeof(float), 0}}) {
-      loadSkyboxCubeTex();
-    }
+    SkyBox() : shader("skybox/vertex.glsl", "skybox/fragment.glsl"),
+    vertArr({SKYBOX_VERTICES}, {}, {{0, 3, 3 * sizeof(float), 0}}) {loadSkyboxCubeTex();}
 
     void draw() const {
       glDepthFunc(GL_LEQUAL);

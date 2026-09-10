@@ -1,13 +1,12 @@
-#include "glm/detail/qualifier.hpp"
-#include "glm/ext/matrix_transform.hpp"
 #include <cstdio>
+#include <cstdlib>
 #include <gltdf/gltdf.hpp>
 #include <gl2df/gl2df.hpp>
 #include "player.hpp"
-#include <iostream>
-#include <unordered_map>
 #include "world.hpp"
 #include "skybox.hpp"
+#include "fastnoiseLite.hpp"
+
 
 void processInput(const gltdf::Window& window) {
   if (glfwGetKey(window.glfwWindow, GLFW_KEY_W) == GLFW_PRESS)
@@ -34,8 +33,8 @@ int main() {
   window.setAutoResizeFrameBuffer();
   glfwSetInputMode(window.glfwWindow, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 
-  gl3df::Camera camera(glm::vec3(0.0f, 0.0f, 3.0f), glm::vec3(0.0f, 1.0f, 0.0f),
-             gl3df::YAW, gl3df::PITCH, gl3df::SPEED * 5, gl3df::SENSITIVITY, gl3df::ZOOM);
+  gl3df::Camera camera(glm::vec3(0.0f, 256.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f),
+             gl3df::YAW, gl3df::PITCH, gl3df::SPEED * 10, gl3df::SENSITIVITY, gl3df::ZOOM);
 
 
   window.setCustomUserPtr(&camera);
@@ -50,16 +49,12 @@ int main() {
   Player player;
 
   World world;
-  world.chunks[glm::ivec3(3, 3, 3)];
-  world.chunks[glm::ivec3(2, 1, 4)];
-  world.chunks[glm::ivec3(8, 2, 6)];
-  world.chunks[glm::ivec3(2, 2, 2)];
-  world.chunks[glm::ivec3(3, 2, 3)];
 
   SkyBox skybox;
 
   player.bindToGeneralUBO(world.blockShader, "vp");
   player.bindToskyboxUBO(skybox.shader, "vp");
+
 
   glEnable(GL_DEPTH_TEST);
   glDepthFunc(GL_LEQUAL);
@@ -76,9 +71,12 @@ int main() {
     glm::mat4 projection = glm::perspective(glm::radians(camera.zoom), (float)window.width / (float)window.height, 0.1f, 1000.0f);
       
     player.updateUBO(view, projection);
-    world.draw();
+    world.draw(glm::ivec2(camera.position.x, camera.position.z));
    
     skybox.draw();
+
+    // std::printf("(%.2f,%.2f,%.2f)\n", camera.position.x, camera.position.y, camera.position.z);
+    std::cout << window.deltaTime << std::endl;
 
     window.swapAndPollEvents();
   }
