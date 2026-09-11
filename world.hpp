@@ -6,6 +6,7 @@
 #include <cstdlib>
 #include <gltdf/gltdf.hpp>
 #include <gl2df/gl2df.hpp>
+#include <strings.h>
 #include <unordered_map>
 #include <utility>
 #include <vector>
@@ -19,9 +20,10 @@ struct IVec2Hash {
   }
 };
 
-#define RENDER_DIS 8
+#define RENDER_DIS 16
 #define CHUNK_WIDTH 16
 #define CHUNK_HEIGHT 128
+#define WATER_LEVEL 42
 
 #define BLOCK_FACE_VERTICES {\
   -1.0f,  1.0f, -1.0f,   0.0f, 1.0f,\
@@ -33,12 +35,13 @@ struct IVec2Hash {
 }
 
 enum BlockType {
-  DIRT, GRASS, AIR
+  DIRT, GRASS, WATER, AIR
 };
 
 constexpr char* blockTexs[AIR] = {
   TEXTURE_BINARY_DIR"/blocks/dirt.png",
-  TEXTURE_BINARY_DIR"/blocks/grass.png"
+  TEXTURE_BINARY_DIR"/blocks/grass.png",
+  TEXTURE_BINARY_DIR"/blocks/water.png"
 };
 
 enum Faceloc {
@@ -67,10 +70,18 @@ class Chunk {
     bool dirty = true;
 
     Chunk(const FastNoiseLite& noise, const glm::ivec2& loc) {
-      for(BlockType& b : this->blockList) b = AIR;
+      for(int x = 0; x < CHUNK_WIDTH; x++)
+        for(int z = 0; z < CHUNK_WIDTH; z++) {
+          for(int y = 0; y < WATER_LEVEL; y++)
+            this->blockList[indexAt(x, y, z)] = WATER;
+          for(int y = WATER_LEVEL; y < CHUNK_HEIGHT; y++)
+            this->blockList[indexAt(x, y, z)] = AIR;
+        }
+
       for(int x = 0; x < CHUNK_WIDTH; x++)
         for(int z = 0; z < CHUNK_WIDTH; z++) {
           int height = (noise.GetNoise((float)(x + loc.x * 16), (float)(z + loc.y * 16)) + 1) * 60;
+          if(height >= WATER_LEVEL) this->blockList[indexAt(x, height, z)] = GRASS;
           for(int y = 0; y < height; y++)
             this->blockList[indexAt(x, y, z)] = DIRT;
         }
@@ -78,7 +89,7 @@ class Chunk {
     }
 
     ~Chunk() {
-      glDeleteBuffers(1, &VBO);
+      glDeleteBuffers(1, &this->VBO);
     }
 
     int inline indexAt(int x, int y, int z) const {
@@ -139,6 +150,7 @@ class World {
     {1, 2, 5 * sizeof(float), 3 * sizeof(float)}})), blockShader(gltdf::Shader("block/vertex.glsl", "block/fragment.glsl")) {
       this->noise.SetNoiseType(FastNoiseLite::NoiseType_Perlin);
       this->noise.SetSeed(rand());
+      this->noise.SetFrequency(0.005f);
       char uniBuff[8];
       this->blockVertices.bind();
       glVertexAttribDivisor(2, 1);
