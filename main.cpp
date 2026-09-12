@@ -61,7 +61,6 @@ int main() {
   glEnable(GL_BLEND);
   glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-
   while(!window.shouldClose()) {
     window.updateDeltaTime();
     glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
@@ -78,7 +77,7 @@ int main() {
     skybox.draw();
 
     // std::printf("(%.2f,%.2f,%.2f)\n", camera.position.x, camera.position.y, camera.position.z);
-    std::cout << window.deltaTime << std::endl;
+    // std::cout << window.deltaTime << std::endl;
 
     window.swapAndPollEvents();
   }

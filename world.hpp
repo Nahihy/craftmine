@@ -77,6 +77,12 @@ class Chunk {
     std::array<BlockType, CHUNK_WIDTH * CHUNK_HEIGHT * CHUNK_WIDTH> blockList;
     std::vector<BlockFace> visableFaces;
     bool dirty = true;
+    struct {
+      Chunk* positiveX = nullptr;
+      Chunk* negativeX = nullptr;
+      Chunk* positiveZ = nullptr;
+      Chunk* negativeZ = nullptr;
+    } neighbors;
 
     Chunk(const FastNoiseLite& noise, const glm::ivec2& loc) {
       for(int x = 0; x < CHUNK_WIDTH; x++)
@@ -112,7 +118,11 @@ class Chunk {
     }
 
     void draw(const gl2df::VertexArray& vertArr) {
-      if(this->dirty) updateFaces();
+      if(this->dirty || 
+        (this->neighbors.negativeX ? this->neighbors.negativeX->dirty : false) &&
+        (this->neighbors.positiveX ? this->neighbors.positiveX->dirty : false) &&
+        (this->neighbors.negativeZ ? this->neighbors.negativeZ->dirty : false) &&
+        (this->neighbors.positiveZ ? this->neighbors.positiveZ->dirty : false)) updateFaces();
       vertArr.bind();
       glBindBuffer(GL_ARRAY_BUFFER, this->VBO);
       glVertexAttribIPointer(2, 4, GL_INT, sizeof(BlockFace), (void*)offsetof(BlockFace, loc));
@@ -135,24 +145,30 @@ class Chunk {
           for(int z = 0; z < CHUNK_WIDTH; z++) {
             if(blockAt(x, y, z) == AIR) continue;
             else if(blockAt(x, y, z) >= TRANSPARENT_START) {
-              if(blockAt(x, y, z - 1) == AIR) this->visableFaces.emplace_back(blockAt(x, y, z), x * 2, y * 2, z * 2, NEGATIVE_Z);
-              if(blockAt(x, y, z + 1) == AIR) this->visableFaces.emplace_back(blockAt(x, y, z), x * 2, y * 2, z * 2, POSITIVE_Z);
-              if(blockAt(x, y - 1, z) == AIR) this->visableFaces.emplace_back(blockAt(x, y, z), x * 2, y * 2, z * 2, NEGATIVE_Y);
-              if(blockAt(x, y + 1, z) == AIR) this->visableFaces.emplace_back(blockAt(x, y, z), x * 2, y * 2, z * 2, POSITIVE_Y);
-              if(blockAt(x - 1, y, z) == AIR) this->visableFaces.emplace_back(blockAt(x, y, z), x * 2, y * 2, z * 2, NEGATIVE_X);
-              if(blockAt(x + 1, y, z) == AIR) this->visableFaces.emplace_back(blockAt(x, y, z), x * 2, y * 2, z * 2, POSITIVE_X);
-            } else {
-              if(blockAt(x, y, z - 1) >= TRANSPARENT_START)
+              if(neighborBlockAt(x, y, z - 1) == AIR)
                 this->visableFaces.emplace_back(blockAt(x, y, z), x * 2, y * 2, z * 2, NEGATIVE_Z);
-              if(blockAt(x, y, z + 1) >= TRANSPARENT_START)
+              if(neighborBlockAt(x, y, z + 1) == AIR)
                 this->visableFaces.emplace_back(blockAt(x, y, z), x * 2, y * 2, z * 2, POSITIVE_Z);
-              if(blockAt(x, y - 1, z) >= TRANSPARENT_START)
+              if(neighborBlockAt(x, y - 1, z) == AIR)
                 this->visableFaces.emplace_back(blockAt(x, y, z), x * 2, y * 2, z * 2, NEGATIVE_Y);
-              if(blockAt(x, y + 1, z) >= TRANSPARENT_START)
+              if(neighborBlockAt(x, y + 1, z) == AIR)
                 this->visableFaces.emplace_back(blockAt(x, y, z), x * 2, y * 2, z * 2, POSITIVE_Y);
-              if(blockAt(x - 1, y, z) >= TRANSPARENT_START)
+              if(neighborBlockAt(x - 1, y, z) == AIR)
                 this->visableFaces.emplace_back(blockAt(x, y, z), x * 2, y * 2, z * 2, NEGATIVE_X);
-              if(blockAt(x + 1, y, z) >= TRANSPARENT_START)
+              if(neighborBlockAt(x + 1, y, z) == AIR)
+                this->visableFaces.emplace_back(blockAt(x, y, z), x * 2, y * 2, z * 2, POSITIVE_X);
+            } else {
+              if(neighborBlockAt(x, y, z - 1) >= TRANSPARENT_START)
+                this->visableFaces.emplace_back(blockAt(x, y, z), x * 2, y * 2, z * 2, NEGATIVE_Z);
+              if(neighborBlockAt(x, y, z + 1) >= TRANSPARENT_START)
+                this->visableFaces.emplace_back(blockAt(x, y, z), x * 2, y * 2, z * 2, POSITIVE_Z);
+              if(neighborBlockAt(x, y - 1, z) >= TRANSPARENT_START)
+                this->visableFaces.emplace_back(blockAt(x, y, z), x * 2, y * 2, z * 2, NEGATIVE_Y);
+              if(neighborBlockAt(x, y + 1, z) >= TRANSPARENT_START)
+                this->visableFaces.emplace_back(blockAt(x, y, z), x * 2, y * 2, z * 2, POSITIVE_Y);
+              if(neighborBlockAt(x - 1, y, z) >= TRANSPARENT_START)
+                this->visableFaces.emplace_back(blockAt(x, y, z), x * 2, y * 2, z * 2, NEGATIVE_X);
+              if(neighborBlockAt(x + 1, y, z) >= TRANSPARENT_START)
                 this->visableFaces.emplace_back(blockAt(x, y, z), x * 2, y * 2, z * 2, POSITIVE_X);
             }
           }
@@ -160,6 +176,15 @@ class Chunk {
       glBufferData(GL_ARRAY_BUFFER, this->visableFaces.size() * sizeof(BlockFace), this->visableFaces.data(), GL_DYNAMIC_DRAW);
       this->dirty = false;
     }
+
+    BlockType inline neighborBlockAt(int x, int y, int z) const {
+      if (y < 0 || y >= CHUNK_HEIGHT) return AIR;
+      if (x < 0) return this->neighbors.negativeX ? this->neighbors.negativeX->blockAt(CHUNK_WIDTH - 1, y, z) : AIR;
+      if (x == CHUNK_WIDTH) return this->neighbors.positiveX ? this->neighbors.positiveX->blockAt(0, y, z) : AIR;
+      if (z < 0) return this->neighbors.negativeZ ? this->neighbors.negativeZ->blockAt(x, y, CHUNK_WIDTH - 1) : AIR;
+      if (z == CHUNK_WIDTH) return this->neighbors.positiveZ ? this->neighbors.positiveZ->blockAt(x, y, 0) : AIR;
+      return blockAt(x, y, z);
+    };
 
 };
 
@@ -269,6 +294,18 @@ class World {
         chunkLoc = glm::ivec2(this->camLoc.x, this->camLoc.y + z);
         this->chunks.try_emplace(chunkLoc, this->noise, chunkLoc);
       }
+
+      for(auto& [loc, chunk] : this->chunks) {
+        auto find = [&](int dx, int dz) -> Chunk* {
+          auto it = this->chunks.find(glm::ivec2(loc.x + dx, loc.y + dz));
+          return it != this->chunks.end() ? &it->second : nullptr;
+        };
+        chunk.neighbors.positiveX = find(1, 0);
+        chunk.neighbors.negativeX = find(-1, 0);
+        chunk.neighbors.positiveZ = find(0, 1);
+        chunk.neighbors.negativeZ = find(0, -1);
+      }
+
     }
 
 };
