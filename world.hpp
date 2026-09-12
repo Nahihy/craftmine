@@ -20,7 +20,7 @@ struct IVec2Hash {
   }
 };
 
-#define RENDER_DIS 16
+#define RENDER_DIS 8
 #define CHUNK_WIDTH 16
 #define CHUNK_HEIGHT 128
 #define WATER_LEVEL 42
@@ -35,12 +35,21 @@ struct IVec2Hash {
 }
 
 enum BlockType {
-  DIRT, GRASS, WATER, AIR
+  DIRT, GRASS,
+
+  GLASS, WATER,
+
+  AIR
 };
 
-constexpr char* blockTexs[AIR] = {
+#define TRANSPARENT_START GLASS
+#define BLOCK_END AIR
+
+constexpr char* blockTexs[BLOCK_END] = {
   TEXTURE_BINARY_DIR"/blocks/dirt.png",
   TEXTURE_BINARY_DIR"/blocks/grass.png",
+
+  TEXTURE_BINARY_DIR"/blocks/glass.png",
   TEXTURE_BINARY_DIR"/blocks/water.png"
 };
 
@@ -125,12 +134,27 @@ class Chunk {
         for(int y = 0; y < CHUNK_HEIGHT; y++)
           for(int z = 0; z < CHUNK_WIDTH; z++) {
             if(blockAt(x, y, z) == AIR) continue;
-            if(blockAt(x, y, z - 1) == AIR) this->visableFaces.emplace_back(blockAt(x, y, z), x * 2, y * 2, z * 2, NEGATIVE_Z);
-            if(blockAt(x, y, z + 1) == AIR) this->visableFaces.emplace_back(blockAt(x, y, z), x * 2, y * 2, z * 2, POSITIVE_Z);
-            if(blockAt(x, y - 1, z) == AIR) this->visableFaces.emplace_back(blockAt(x, y, z), x * 2, y * 2, z * 2, NEGATIVE_Y);
-            if(blockAt(x, y + 1, z) == AIR) this->visableFaces.emplace_back(blockAt(x, y, z), x * 2, y * 2, z * 2, POSITIVE_Y);
-            if(blockAt(x - 1, y, z) == AIR) this->visableFaces.emplace_back(blockAt(x, y, z), x * 2, y * 2, z * 2, NEGATIVE_X);
-            if(blockAt(x + 1, y, z) == AIR) this->visableFaces.emplace_back(blockAt(x, y, z), x * 2, y * 2, z * 2, POSITIVE_X);
+            else if(blockAt(x, y, z) >= TRANSPARENT_START) {
+              if(blockAt(x, y, z - 1) == AIR) this->visableFaces.emplace_back(blockAt(x, y, z), x * 2, y * 2, z * 2, NEGATIVE_Z);
+              if(blockAt(x, y, z + 1) == AIR) this->visableFaces.emplace_back(blockAt(x, y, z), x * 2, y * 2, z * 2, POSITIVE_Z);
+              if(blockAt(x, y - 1, z) == AIR) this->visableFaces.emplace_back(blockAt(x, y, z), x * 2, y * 2, z * 2, NEGATIVE_Y);
+              if(blockAt(x, y + 1, z) == AIR) this->visableFaces.emplace_back(blockAt(x, y, z), x * 2, y * 2, z * 2, POSITIVE_Y);
+              if(blockAt(x - 1, y, z) == AIR) this->visableFaces.emplace_back(blockAt(x, y, z), x * 2, y * 2, z * 2, NEGATIVE_X);
+              if(blockAt(x + 1, y, z) == AIR) this->visableFaces.emplace_back(blockAt(x, y, z), x * 2, y * 2, z * 2, POSITIVE_X);
+            } else {
+              if(blockAt(x, y, z - 1) >= TRANSPARENT_START)
+                this->visableFaces.emplace_back(blockAt(x, y, z), x * 2, y * 2, z * 2, NEGATIVE_Z);
+              if(blockAt(x, y, z + 1) >= TRANSPARENT_START)
+                this->visableFaces.emplace_back(blockAt(x, y, z), x * 2, y * 2, z * 2, POSITIVE_Z);
+              if(blockAt(x, y - 1, z) >= TRANSPARENT_START)
+                this->visableFaces.emplace_back(blockAt(x, y, z), x * 2, y * 2, z * 2, NEGATIVE_Y);
+              if(blockAt(x, y + 1, z) >= TRANSPARENT_START)
+                this->visableFaces.emplace_back(blockAt(x, y, z), x * 2, y * 2, z * 2, POSITIVE_Y);
+              if(blockAt(x - 1, y, z) >= TRANSPARENT_START)
+                this->visableFaces.emplace_back(blockAt(x, y, z), x * 2, y * 2, z * 2, NEGATIVE_X);
+              if(blockAt(x + 1, y, z) >= TRANSPARENT_START)
+                this->visableFaces.emplace_back(blockAt(x, y, z), x * 2, y * 2, z * 2, POSITIVE_X);
+            }
           }
       glBindBuffer(GL_ARRAY_BUFFER, this->VBO);
       glBufferData(GL_ARRAY_BUFFER, this->visableFaces.size() * sizeof(BlockFace), this->visableFaces.data(), GL_DYNAMIC_DRAW);
@@ -198,11 +222,11 @@ class World {
 
       GLenum internalFormat = (channels == 4) ? GL_RGBA8 : GL_RGB8;
       GLenum format = (channels == 4) ? GL_RGBA : GL_RGB;
-      glTexImage3D(GL_TEXTURE_2D_ARRAY, 0, internalFormat, width, height, AIR, 0, format, GL_UNSIGNED_BYTE, nullptr);
+      glTexImage3D(GL_TEXTURE_2D_ARRAY, 0, internalFormat, width, height, BLOCK_END, 0, format, GL_UNSIGNED_BYTE, nullptr);
       glTexSubImage3D(GL_TEXTURE_2D_ARRAY, 0, 0, 0, 0, width, height, 1, format, GL_UNSIGNED_BYTE, data);
       stbi_image_free(data);
 
-      for(int i = 1; i < AIR; i++) {
+      for(int i = 1; i < BLOCK_END; i++) {
         data = stbi_load(blockTexs[i], &width, &height, &channels, 0);
         if (data) {
           glTexSubImage3D(GL_TEXTURE_2D_ARRAY, 0, 0, 0, i, width, height, 1, format, GL_UNSIGNED_BYTE, data);
