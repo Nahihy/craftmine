@@ -100,6 +100,7 @@ class Chunk {
           for(int y = 0; y < height; y++)
             this->blockList[indexAt(x, y, z)] = DIRT;
         }
+
       glGenBuffers(1, &this->VBO);
     }
 
@@ -145,17 +146,18 @@ class Chunk {
           for(int z = 0; z < CHUNK_WIDTH; z++) {
             if(blockAt(x, y, z) == AIR) continue;
             else if(blockAt(x, y, z) >= TRANSPARENT_START) {
-              if(neighborBlockAt(x, y, z - 1) == AIR)
+              BlockType b = blockAt(x, y, z);
+              if(neighborBlockAt(x, y, z - 1) != b)
                 this->visableFaces.emplace_back(blockAt(x, y, z), x * 2, y * 2, z * 2, NEGATIVE_Z);
-              if(neighborBlockAt(x, y, z + 1) == AIR)
+              if(neighborBlockAt(x, y, z + 1) != b)
                 this->visableFaces.emplace_back(blockAt(x, y, z), x * 2, y * 2, z * 2, POSITIVE_Z);
-              if(neighborBlockAt(x, y - 1, z) == AIR)
+              if(neighborBlockAt(x, y - 1, z) != b)
                 this->visableFaces.emplace_back(blockAt(x, y, z), x * 2, y * 2, z * 2, NEGATIVE_Y);
-              if(neighborBlockAt(x, y + 1, z) == AIR)
+              if(neighborBlockAt(x, y + 1, z) != b)
                 this->visableFaces.emplace_back(blockAt(x, y, z), x * 2, y * 2, z * 2, POSITIVE_Y);
-              if(neighborBlockAt(x - 1, y, z) == AIR)
+              if(neighborBlockAt(x - 1, y, z) != b)
                 this->visableFaces.emplace_back(blockAt(x, y, z), x * 2, y * 2, z * 2, NEGATIVE_X);
-              if(neighborBlockAt(x + 1, y, z) == AIR)
+              if(neighborBlockAt(x + 1, y, z) != b)
                 this->visableFaces.emplace_back(blockAt(x, y, z), x * 2, y * 2, z * 2, POSITIVE_X);
             } else {
               if(neighborBlockAt(x, y, z - 1) >= TRANSPARENT_START)
